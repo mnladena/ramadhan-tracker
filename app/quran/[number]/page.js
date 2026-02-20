@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { QURAN_SURAHS, JUZ_AMMA } from "../../lib/quran";
+import { setLastReadSurah } from "../../lib/storage";
 
 export default function SurahDetailPage() {
   const { number } = useParams();
   const [surahData, setSurahData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastMarkedAyat, setLastMarkedAyat] = useState(null);
 
   const surahInfo = QURAN_SURAHS.find((s) => s.number === parseInt(number));
 
@@ -18,10 +20,15 @@ export default function SurahDetailPage() {
       setIsLoading(true);
       setError(null);
 
-      // Optimization: If it's Juz Amma (78-114) and we have local data, use it?
-      // Actually, standardizing with API for all is more consistent for the detail page.
-      // But Juz Amma page still exists.
-      
+      // Check storage for this surah's last marked ayat
+      const stored = localStorage.getItem("ramadhan_planner_2026_last_read");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.number === parseInt(number)) {
+          setLastMarkedAyat(parsed.ayat);
+        }
+      }
+
       try {
         const res = await fetch(`https://api.alquran.cloud/v1/surah/${number}/editions/quran-uthmani,id.indonesian`);
         if (!res.ok) throw new Error("Gagal mengambil data surah");
@@ -29,7 +36,6 @@ export default function SurahDetailPage() {
         const data = await res.json();
         if (data.code !== 200) throw new Error(data.data);
         
-        // Data contains two editions: 0 is Arabic, 1 is Indonesian
         const arabicData = data.data[0];
         const translationData = data.data[1];
         
@@ -46,6 +52,15 @@ export default function SurahDetailPage() {
 
     if (number) fetchSurah();
   }, [number]);
+
+  const markAyat = (ayatNumber) => {
+    setLastMarkedAyat(ayatNumber);
+    setLastReadSurah({
+      number: surahInfo.number,
+      name: surahInfo.name,
+      arabic: surahInfo.arabic
+    }, ayatNumber);
+  };
 
   if (isLoading) {
     return (
@@ -115,28 +130,52 @@ export default function SurahDetailPage() {
 
       {/* Ayats List */}
       <div className="space-y-4">
-        {surahData?.ayahs.map((ayah, index) => (
-          <div
-            key={ayah.number}
-            className="glass-card p-6 space-y-6 hover:bg-white/[0.03] transition-all group border-white/5 hover:border-amber-500/20"
-          >
-            <div className="flex justify-between items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-                <span className="text-xs font-bold text-amber-400">{ayah.numberInSurah}</span>
+        {surahData?.ayahs.map((ayah, index) => {
+          const isMarked = lastMarkedAyat === ayah.numberInSurah;
+          return (
+            <div
+              key={ayah.number}
+              id={`ayat-${ayah.numberInSurah}`}
+              className={`
+                glass-card p-6 space-y-6 hover:bg-white/[0.03] transition-all group border-white/5 
+                ${isMarked ? "border-amber-500/40 bg-amber-500/[0.03]" : "hover:border-amber-500/20"}
+              `}
+            >
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex flex-col gap-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${isMarked ? "bg-amber-500/20 border-amber-500/40" : "bg-amber-500/10 border-amber-500/20"}`}>
+                    <span className={`text-xs font-bold ${isMarked ? "text-amber-300" : "text-amber-400"}`}>{ayah.numberInSurah}</span>
+                  </div>
+                  <button
+                    onClick={() => markAyat(ayah.numberInSurah)}
+                    className={`
+                      w-10 h-10 rounded-xl flex items-center justify-center transition-all
+                      ${isMarked 
+                        ? "bg-amber-500 text-white shadow-[0_0_15px_rgba(212,169,52,0.3)]" 
+                        : "bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/60"
+                      }
+                    `}
+                    title={isMarked ? "Terakhir dibaca" : "Tandai terakhir dibaca"}
+                  >
+                    <svg className="w-5 h-5" fill={isMarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-3xl leading-[2.5] font-arabic text-white/90 text-right" dir="rtl">
+                  {ayah.text}
+                  <span className="text-amber-500/40 text-2xl mr-2"> ﴿{ayah.numberInSurah}﴾</span>
+                </p>
               </div>
-              <p className="text-3xl leading-[2.5] font-arabic text-white/90 text-right" dir="rtl">
-                {ayah.text}
-                <span className="text-amber-500/40 text-2xl mr-2"> ﴿{ayah.numberInSurah}﴾</span>
-              </p>
+              
+              <div className="pl-14">
+                <p className="text-white/80 leading-relaxed italic">
+                  {surahData.translationAyats[index].text}
+                </p>
+              </div>
             </div>
-            
-            <div className="pl-14">
-              <p className="text-white/80 leading-relaxed italic">
-                {surahData.translationAyats[index].text}
-              </p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Navigation Buttons */}

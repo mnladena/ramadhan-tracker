@@ -1,67 +1,56 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { IMSAKIYAH_JAKARTA, getRamadhanDay } from "../lib/data";
+import { getRamadhanDay } from "../lib/data";
+import { getPrayerTimes } from "../lib/prayerTimes";
 
 export default function CountdownTimer() {
   const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [nextEvent, setNextEvent] = useState("Loading...");
+  const [nextEvent, setNextEvent] = useState("Memuat...");
+  const [useLocalTimes, setUseLocalTimes] = useState(false);
 
   useEffect(() => {
-    function getNextPrayerTime() {
+    async function updateCountdown() {
       const now = new Date();
-      const currentDay = getRamadhanDay(now);
-      const schedule = IMSAKIYAH_JAKARTA.find((s) => s.day === currentDay) || IMSAKIYAH_JAKARTA[0];
+      const dateString = now.toISOString().split("T")[0]; // YYYY-MM-DD
+      
+      const timings = await getPrayerTimes(dateString);
+      if (!timings) return;
 
       const events = [
-        { name: "Imsak", time: schedule.imsak },
-        { name: "Subuh", time: schedule.subuh },
-        { name: "Terbit", time: schedule.terbit },
-        { name: "Dzuhur", time: schedule.dzuhur },
-        { name: "Ashar", time: schedule.ashar },
-        { name: "Maghrib (Buka Puasa)", time: schedule.maghrib },
-        { name: "Isya", time: schedule.isya },
+        { name: "Imsak", time: timings.imsak },
+        { name: "Subuh", time: timings.subuh },
+        { name: "Terbit", time: timings.terbit },
+        { name: "Dzuhur", time: timings.dzuhur },
+        { name: "Ashar", time: timings.ashar },
+        { name: "Maghrib", time: timings.maghrib },
+        { name: "Isya", time: timings.isya },
       ];
 
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      let found = false;
 
       for (const event of events) {
         const [h, m] = event.time.split(":").map(Number);
         const eventMinutes = h * 60 + m;
         if (eventMinutes > currentMinutes) {
           const diff = eventMinutes - currentMinutes;
-          const hours = Math.floor(diff / 60);
-          const minutes = diff % 60;
-          const seconds = 60 - now.getSeconds();
-          return {
-            name: event.name,
-            hours,
-            minutes: minutes > 0 ? minutes - 1 : 0,
-            seconds: seconds === 60 ? 0 : seconds,
-          };
+          setNextEvent(event.name + (event.name === "Maghrib" ? " (Buka)" : ""));
+          setTimeLeft({
+            hours: Math.floor(diff / 60),
+            minutes: diff % 60 === 0 ? 0 : diff % 60 - 1,
+            seconds: 60 - now.getSeconds() === 60 ? 0 : 60 - now.getSeconds(),
+          });
+          found = true;
+          break;
         }
       }
 
-      // After Isya, count to next day's Imsak
-      const nextSchedule = IMSAKIYAH_JAKARTA.find((s) => s.day === currentDay + 1) || IMSAKIYAH_JAKARTA[0];
-      const [h, m] = nextSchedule.imsak.split(":").map(Number);
-      const targetMinutes = 24 * 60 - currentMinutes + h * 60 + m;
-      return {
-        name: "Imsak",
-        hours: Math.floor(targetMinutes / 60),
-        minutes: targetMinutes % 60,
-        seconds: 60 - now.getSeconds(),
-      };
-    }
-
-    function updateCountdown() {
-      const result = getNextPrayerTime();
-      setNextEvent(result.name);
-      setTimeLeft({
-        hours: result.hours,
-        minutes: result.minutes,
-        seconds: result.seconds,
-      });
+      if (!found) {
+        // After Isya
+        setNextEvent("Imsak Esok");
+        // Logic for next day could be added here, but simpler to just show 0 or "Besok"
+      }
     }
 
     updateCountdown();

@@ -124,3 +124,27 @@ export function getDayProgress(day) {
 
   return total > 0 ? Math.round((done / total) * 100) : 0;
 }
+
+export function getLastReadSurah() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY}_last_read`);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastReadSurah(surah, ayat = null) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(`${STORAGE_KEY}_last_read`, JSON.stringify({
+      ...surah,
+      ayat,
+      readAt: new Date().toISOString()
+    }));
+  } catch (e) {
+    console.error("Failed to save last read:", e);
+  }
+}
