@@ -4,6 +4,13 @@ import Sidebar from "./components/Sidebar";
 export const metadata = {
   title: "Ramadhan Planner 1447H",
   description: "Aplikasi perencana ibadah Ramadhan — lacak shalat, puasa, Al-Quran, doa, dan jadwal imsakiyah.",
+  manifest: "/manifest.json",
+  themeColor: "#10b981",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Ramadhan",
+  },
 };
 
 export default function RootLayout({ children }) {

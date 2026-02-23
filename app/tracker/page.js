@@ -5,21 +5,47 @@ import DateNavigator from "../components/DateNavigator";
 import ChecklistItem from "../components/ChecklistItem";
 import ProgressRing from "../components/ProgressRing";
 import { SHALAT_LIST, DAILY_TASKS, getRamadhanDay } from "../lib/data";
-import { getTrackerData, setTrackerData, getDayProgress } from "../lib/storage";
+import { getTrackerData, setTrackerData, getDayProgress, getLastReadSurah } from "../lib/storage";
 
 export default function TrackerPage() {
   const [mounted, setMounted] = useState(false);
-  const [currentDay, setCurrentDay] = useState(getRamadhanDay());
+  const [todayLimit, setTodayLimit] = useState(1);
+  const [currentDay, setCurrentDay] = useState(1);
   const [data, setData] = useState(null);
   const [progress, setProgress] = useState(0);
 
+  const handleDayChange = (day) => {
+    if (day <= 30) {
+      setCurrentDay(day);
+    }
+  };
+
   useEffect(() => {
+    const today = getRamadhanDay();
+    setTodayLimit(today);
+    setCurrentDay(today);
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (mounted) {
-      const d = getTrackerData(currentDay);
+      let d = getTrackerData(currentDay);
+      const lastRead = getLastReadSurah();
+
+      // Automatically sync progress if it's today or if current data is behind
+      if (lastRead && lastRead.juz) {
+        if (!d.quran || lastRead.juz > (d.quran.juz || 0)) {
+          d = {
+            ...d,
+            quran: {
+              ...d.quran,
+              juz: lastRead.juz
+            }
+          };
+          setTrackerData(currentDay, d);
+        }
+      }
+
       setData(d);
       setProgress(getDayProgress(currentDay));
     }
@@ -32,26 +58,31 @@ export default function TrackerPage() {
   };
 
   const toggleShalat = (id) => {
+    if (currentDay > todayLimit) return;
     const newData = { ...data, shalat: { ...data.shalat, [id]: !data.shalat[id] } };
     updateData(newData);
   };
 
   const toggleTask = (id) => {
+    if (currentDay > todayLimit) return;
     const newData = { ...data, [id]: !data[id] };
     updateData(newData);
   };
 
   const updateQuranJuz = (juz) => {
+    if (currentDay > todayLimit) return;
     const newData = { ...data, quran: { ...data.quran, juz: Math.max(0, Math.min(30, juz)) } };
     updateData(newData);
   };
 
   const updateQuranPages = (pages) => {
+    if (currentDay > todayLimit) return;
     const newData = { ...data, quran: { ...data.quran, pages: Math.max(0, pages) } };
     updateData(newData);
   };
 
   const updateNotes = (notes) => {
+    if (currentDay > todayLimit) return;
     const newData = { ...data, notes };
     updateData(newData);
   };
@@ -79,7 +110,7 @@ export default function TrackerPage() {
 
       {/* Date Navigator */}
       <div className="glass-card p-5">
-        <DateNavigator currentDay={currentDay} onDayChange={setCurrentDay} />
+        <DateNavigator currentDay={currentDay} onDayChange={handleDayChange} todayLimit={todayLimit} />
       </div>
 
       {/* Shalat Section */}
@@ -95,6 +126,7 @@ export default function TrackerPage() {
               icon={shalat.icon}
               checked={data.shalat[shalat.id] || false}
               onChange={() => toggleShalat(shalat.id)}
+              disabled={currentDay > todayLimit}
             />
           ))}
         </div>
@@ -111,7 +143,8 @@ export default function TrackerPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => updateQuranJuz((data.quran?.juz || 0) - 1)}
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold"
+                disabled={currentDay > todayLimit}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 −
               </button>
@@ -121,7 +154,8 @@ export default function TrackerPage() {
               </div>
               <button
                 onClick={() => updateQuranJuz((data.quran?.juz || 0) + 1)}
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold"
+                disabled={currentDay > todayLimit}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 +
               </button>
@@ -132,7 +166,8 @@ export default function TrackerPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => updateQuranPages((data.quran?.pages || 0) - 1)}
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold"
+                disabled={currentDay > todayLimit}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 −
               </button>
@@ -142,7 +177,8 @@ export default function TrackerPage() {
               </div>
               <button
                 onClick={() => updateQuranPages((data.quran?.pages || 0) + 1)}
-                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold"
+                disabled={currentDay > todayLimit}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all flex items-center justify-center text-lg font-bold disabled:opacity-20 disabled:cursor-not-allowed"
               >
                 +
               </button>
@@ -164,6 +200,7 @@ export default function TrackerPage() {
               icon={task.icon}
               checked={data[task.id] || false}
               onChange={() => toggleTask(task.id)}
+              disabled={currentDay > todayLimit}
             />
           ))}
         </div>
@@ -177,8 +214,9 @@ export default function TrackerPage() {
         <textarea
           value={data.notes || ""}
           onChange={(e) => updateNotes(e.target.value)}
-          placeholder="Tuliskan refleksi atau catatan hari ini..."
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 resize-none min-h-[100px] transition-all"
+          disabled={currentDay > todayLimit}
+          placeholder={currentDay > todayLimit ? "Belum bisa menulis catatan untuk hari ini" : "Tuliskan refleksi atau catatan hari ini..."}
+          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/30 focus:ring-1 focus:ring-amber-500/20 resize-none min-h-[100px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -191,11 +229,12 @@ export default function TrackerPage() {
           {Array.from({ length: 30 }, (_, i) => i + 1).map((day) => {
             const dayProg = getDayProgress(day);
             const isActive = day === currentDay;
-            const isToday = day === getRamadhanDay();
+            const isToday = day === todayLimit;
+            const isFuture = day > todayLimit;
             return (
               <button
                 key={day}
-                onClick={() => setCurrentDay(day)}
+                onClick={() => handleDayChange(day)}
                 className={`
                   relative w-full aspect-square rounded-xl flex items-center justify-center text-sm font-semibold transition-all duration-300
                   ${isActive
@@ -206,7 +245,8 @@ export default function TrackerPage() {
                         ? "bg-white/5 border border-white/10 text-white/70"
                         : "bg-white/[0.02] border border-white/5 text-white/30"
                   }
-                  hover:scale-110
+                  ${isFuture ? "opacity-40" : ""}
+                  hover:scale-110 active:scale-95
                 `}
               >
                 {day}

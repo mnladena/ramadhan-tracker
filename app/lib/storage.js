@@ -1,3 +1,5 @@
+import { getRamadhanDay } from "./data";
+
 const STORAGE_KEY = "ramadhan_planner_2026";
 
 export function getTrackerData(day) {
@@ -82,6 +84,15 @@ export function getDashboardStats() {
   }
   if (tempStreak > currentStreak) currentStreak = tempStreak;
 
+  // Check last read surah for progress as well
+  const lastRead = getLastReadSurah();
+  if (lastRead && lastRead.juz) {
+    totalQuranJuz = Math.max(totalQuranJuz, lastRead.juz);
+  } else if (lastRead && lastRead.number) {
+    // Fallback if juz not stored: we could import QURAN_SURAHS but better to just 
+    // ensure it's stored in setLastReadSurah
+  }
+
   return {
     shalatPercentage: totalShalatPossible > 0 ? Math.round((totalShalatDone / totalShalatPossible) * 100) : 0,
     fastingDays,
@@ -139,11 +150,25 @@ export function getLastReadSurah() {
 export function setLastReadSurah(surah, ayat = null) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(`${STORAGE_KEY}_last_read`, JSON.stringify({
+    const lastReadData = {
       ...surah,
       ayat,
       readAt: new Date().toISOString()
-    }));
+    };
+    localStorage.setItem(`${STORAGE_KEY}_last_read`, JSON.stringify(lastReadData));
+
+    // Also update today's tracker progress automatically
+    if (surah.juz) {
+      const today = getRamadhanDay();
+      const currentData = getTrackerData(today);
+      if (!currentData.quran || (surah.juz > (currentData.quran.juz || 0))) {
+        currentData.quran = {
+          ...currentData.quran,
+          juz: surah.juz
+        };
+        setTrackerData(today, currentData);
+      }
+    }
   } catch (e) {
     console.error("Failed to save last read:", e);
   }

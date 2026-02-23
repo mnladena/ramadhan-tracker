@@ -1,6 +1,6 @@
 "use client";
 
-export default function DateNavigator({ currentDay, onDayChange }) {
+export default function DateNavigator({ currentDay, onDayChange, todayLimit }) {
   return (
     <div className="flex items-center gap-4">
       <button

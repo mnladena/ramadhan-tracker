@@ -58,7 +58,8 @@ export default function SurahDetailPage() {
     setLastReadSurah({
       number: surahInfo.number,
       name: surahInfo.name,
-      arabic: surahInfo.arabic
+      arabic: surahInfo.arabic,
+      juz: surahInfo.juz
     }, ayatNumber);
   };
 

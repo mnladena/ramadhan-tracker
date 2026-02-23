@@ -1,14 +1,16 @@
 "use client";
 
-export default function ChecklistItem({ label, icon, checked, onChange }) {
+export default function ChecklistItem({ label, icon, checked, onChange, disabled }) {
   return (
     <button
-      onClick={() => onChange(!checked)}
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
       className={`
         group flex items-center gap-3 px-4 py-3 rounded-xl w-full text-left transition-all duration-300
+        ${disabled ? "opacity-40 cursor-not-allowed" : ""}
         ${checked
           ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-          : "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20"
+          : !disabled ? "bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20" : "bg-white/5 border border-white/10"
         }
       `}
     >

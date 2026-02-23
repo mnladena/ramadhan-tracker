@@ -7,6 +7,7 @@ import CountdownTimer from "./components/CountdownTimer";
 import ChecklistItem from "./components/ChecklistItem";
 import { getRamadhanDay, getMotivationalQuote, SHALAT_LIST, DAILY_TASKS } from "./lib/data";
 import { getDashboardStats, getDayProgress, getTrackerData, setTrackerData, getLastReadSurah } from "./lib/storage";
+import { getUserCoordinates } from "./lib/prayerTimes";
 import Link from "next/link";
 
 export default function Dashboard() {
@@ -25,6 +26,13 @@ export default function Dashboard() {
     setDayProgress(getDayProgress(today));
     setTodayData(getTrackerData(today));
     setLastRead(getLastReadSurah());
+
+    // Detect location
+    getUserCoordinates().then(coords => {
+      if (coords && coords.name) {
+        setLocationName(coords.name);
+      }
+    });
   }, [today]);
 
   const handleQuickToggle = (key) => {
@@ -41,6 +49,21 @@ export default function Dashboard() {
     setTodayData({ ...data });
     setDayProgress(getDayProgress(today));
     setStats(getDashboardStats());
+  };
+
+  const refreshLocation = async () => {
+    setLocationName("Mendeteksi...");
+    localStorage.removeItem("ramadhan_user_location");
+    try {
+      const coords = await getUserCoordinates();
+      if (coords && coords.name) {
+        setLocationName(coords.name);
+      } else {
+        setLocationName("Gagal mendeteksi");
+      }
+    } catch (error) {
+      setLocationName("Gagal mendeteksi");
+    }
   };
 
   if (!mounted) {
@@ -64,8 +87,12 @@ export default function Dashboard() {
               Hari ke-<span className="text-amber-400 font-semibold">{today}</span> Ramadhan 1447H
             </p>
             <span className="w-1 h-1 rounded-full bg-white/20"></span>
-            <div className="flex items-center gap-1.5 text-amber-400/80 text-sm">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <div 
+              className="flex items-center gap-1.5 text-amber-400/80 text-sm cursor-pointer hover:text-amber-400 transition-colors group"
+              onClick={refreshLocation}
+              title="Klik untuk deteksi ulang lokasi"
+            >
+              <svg className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>

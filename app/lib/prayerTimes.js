@@ -130,7 +130,7 @@ async function getIPLocation() {
   }
 }
 
-async function getUserCoordinates() {
+export async function getUserCoordinates() {
   // Check stored location
   const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
   if (stored) return JSON.parse(stored);
