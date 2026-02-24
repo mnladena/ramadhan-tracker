@@ -2,7 +2,7 @@ const CACHE_NAME = "ramadhan-tracker-v1";
 const ASSETS_TO_CACHE = [
   "/",
   "/manifest.json",
-  "/icons/icon.svg",
+  "/icons/icon.webp",
 ];
 
 self.addEventListener("install", (event) => {
