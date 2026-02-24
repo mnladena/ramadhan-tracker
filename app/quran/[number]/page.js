@@ -53,13 +53,32 @@ export default function SurahDetailPage() {
     if (number) fetchSurah();
   }, [number]);
 
+  // Handle scrolling to ayat from hash
+  useEffect(() => {
+    if (!isLoading && surahData) {
+      const hash = window.location.hash;
+      if (hash) {
+        const id = hash.substring(1); // remove #
+        setTimeout(() => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Highlight effect is already handled by isMarked class in the render
+          }
+        }, 500); // Wait for rendering to settle
+      }
+    }
+  }, [isLoading, surahData]);
+
   const markAyat = (ayatNumber) => {
+    const ayah = surahData?.ayahs.find(a => a.numberInSurah === ayatNumber);
     setLastMarkedAyat(ayatNumber);
     setLastReadSurah({
       number: surahInfo.number,
       name: surahInfo.name,
       arabic: surahInfo.arabic,
-      juz: surahInfo.juz
+      juz: ayah ? ayah.juz : surahInfo.juz,
+      page: ayah ? ayah.page : null
     }, ayatNumber);
   };
 

@@ -158,16 +158,26 @@ export function setLastReadSurah(surah, ayat = null) {
     localStorage.setItem(`${STORAGE_KEY}_last_read`, JSON.stringify(lastReadData));
 
     // Also update today's tracker progress automatically
-    if (surah.juz) {
-      const today = getRamadhanDay();
-      const currentData = getTrackerData(today);
-      if (!currentData.quran || (surah.juz > (currentData.quran.juz || 0))) {
-        currentData.quran = {
-          ...currentData.quran,
-          juz: surah.juz
-        };
-        setTrackerData(today, currentData);
-      }
+    const today = getRamadhanDay();
+    const currentData = getTrackerData(today);
+    let changed = false;
+
+    if (!currentData.quran) {
+      currentData.quran = { juz: 0, pages: 0 };
+    }
+
+    if (surah.juz && surah.juz > (currentData.quran.juz || 0)) {
+      currentData.quran.juz = surah.juz;
+      changed = true;
+    }
+
+    if (surah.page && surah.page > (currentData.quran.pages || 0)) {
+      currentData.quran.pages = surah.page;
+      changed = true;
+    }
+
+    if (changed) {
+      setTrackerData(today, currentData);
     }
   } catch (e) {
     console.error("Failed to save last read:", e);

@@ -6,6 +6,7 @@ import ChecklistItem from "../components/ChecklistItem";
 import ProgressRing from "../components/ProgressRing";
 import { SHALAT_LIST, DAILY_TASKS, getRamadhanDay } from "../lib/data";
 import { getTrackerData, setTrackerData, getDayProgress, getLastReadSurah } from "../lib/storage";
+import Link from "next/link";
 
 export default function TrackerPage() {
   const [mounted, setMounted] = useState(false);
@@ -13,6 +14,7 @@ export default function TrackerPage() {
   const [currentDay, setCurrentDay] = useState(1);
   const [data, setData] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [lastRead, setLastRead] = useState(null);
 
   const handleDayChange = (day) => {
     if (day <= 30) {
@@ -30,18 +32,25 @@ export default function TrackerPage() {
   useEffect(() => {
     if (mounted) {
       let d = getTrackerData(currentDay);
-      const lastRead = getLastReadSurah();
+      const lr = getLastReadSurah();
+      setLastRead(lr);
 
       // Automatically sync progress if it's today or if current data is behind
-      if (lastRead && lastRead.juz) {
-        if (!d.quran || lastRead.juz > (d.quran.juz || 0)) {
-          d = {
-            ...d,
-            quran: {
-              ...d.quran,
-              juz: lastRead.juz
-            }
-          };
+      if (lr && lr.juz) {
+        let changed = false;
+        if (!d.quran) d.quran = { juz: 0, pages: 0 };
+        
+        if (lr.juz > (d.quran.juz || 0)) {
+          d.quran.juz = lr.juz;
+          changed = true;
+        }
+        
+        if (lr.page && lr.page > (d.quran.pages || 0)) {
+          d.quran.pages = lr.page;
+          changed = true;
+        }
+
+        if (changed) {
           setTrackerData(currentDay, d);
         }
       }
@@ -137,9 +146,33 @@ export default function TrackerPage() {
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span className="text-amber-400">📖</span> Al-Quran
         </h2>
+
+        {/* Automatic Progress Info */}
+        {lastRead && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl">
+                📖
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-amber-400/80 font-bold mb-0.5">Progress Bacaan</p>
+                <h3 className="text-white font-bold text-lg">
+                  {lastRead.name} <span className="text-amber-400 ml-1">Ayat {lastRead.ayat}</span>
+                </h3>
+              </div>
+            </div>
+            <Link 
+              href={`/quran/${lastRead.number}#ayat-${lastRead.ayat}`}
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all shadow-[0_0_20px_rgba(212,169,52,0.2)] text-center"
+            >
+              Lanjut Membaca
+            </Link>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-white/50 block mb-2">Juz yang dibaca</label>
+            <label className="text-sm text-white/50 block mb-2">Juz (Otomatis Sync)</label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => updateQuranJuz((data.quran?.juz || 0) - 1)}
@@ -162,7 +195,7 @@ export default function TrackerPage() {
             </div>
           </div>
           <div>
-            <label className="text-sm text-white/50 block mb-2">Halaman dibaca hari ini</label>
+            <label className="text-sm text-white/50 block mb-2">Halaman (Otomatis Sync)</label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => updateQuranPages((data.quran?.pages || 0) - 1)}
@@ -173,7 +206,7 @@ export default function TrackerPage() {
               </button>
               <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-center">
                 <span className="text-2xl font-bold text-white">{data.quran?.pages || 0}</span>
-                <span className="text-white/40 text-sm ml-1">halaman</span>
+                <span className="text-white/40 text-sm ml-1">hal</span>
               </div>
               <button
                 onClick={() => updateQuranPages((data.quran?.pages || 0) + 1)}
