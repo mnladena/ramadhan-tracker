@@ -1,6 +1,23 @@
 import { getRamadhanDay } from "./data";
 
 const STORAGE_KEY = "ramadhan_planner_2026";
+const START_DATE_KEY = "ramadhan_start_date_2026";
+
+export function hasChosenStartDate() {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(START_DATE_KEY) !== null;
+}
+
+export function getRamadhanStartDate() {
+  if (typeof window === "undefined") return 18;
+  const stored = localStorage.getItem(START_DATE_KEY);
+  return stored ? parseInt(stored, 10) : 18;
+}
+
+export function setRamadhanStartDate(day) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(START_DATE_KEY, String(day));
+}
 
 export function getTrackerData(day) {
   if (typeof window === "undefined") return getDefaultData();

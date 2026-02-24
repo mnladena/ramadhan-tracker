@@ -1,4 +1,15 @@
-export const RAMADHAN_START_2026 = new Date(2026, 1, 18); // Feb 18, 2026 (1 Ramadhan 1447H approx)
+// Default start date, can be overridden by user preference stored in localStorage
+export const RAMADHAN_START_DEFAULT = 18; // Feb 18
+
+export function getStartDate() {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("ramadhan_start_date_2026");
+    if (stored) {
+      return new Date(2026, 1, parseInt(stored, 10));
+    }
+  }
+  return new Date(2026, 1, RAMADHAN_START_DEFAULT);
+}
 
 export const SHALAT_LIST = [
   { id: "subuh", label: "Subuh", icon: "🌅" },
@@ -163,7 +174,7 @@ export const MOTIVATIONAL_QUOTES = [
 export const DUA_CATEGORIES = ["Semua", "Sahur", "Iftar", "Harian", "Tarawih", "Lailatul Qadr"];
 
 export function getRamadhanDay(date = new Date()) {
-  const start = new Date(RAMADHAN_START_2026);
+  const start = new Date(getStartDate());
   start.setHours(0, 0, 0, 0);
   const target = new Date(date);
   target.setHours(0, 0, 0, 0);

@@ -1,6 +1,7 @@
 import "./globals.css";
 import Sidebar from "./components/Sidebar";
 import PWARegistration from "./components/PWARegistration";
+import StartDatePicker from "./components/StartDatePicker";
 
 export const metadata = {
   title: "Ramadhan Planner 1447H",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }) {
     <html lang="id">
       <body className="antialiased min-h-screen stars-bg">
         <PWARegistration />
+        <StartDatePicker />
         <Sidebar />
         {/* Main content area - offset for sidebar on desktop, bottom nav on mobile */}
         <main className="md:ml-64 min-h-screen pb-24 md:pb-0">
