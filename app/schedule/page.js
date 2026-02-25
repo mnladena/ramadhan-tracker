@@ -2,8 +2,14 @@
 
 import { useState, useEffect } from "react";
 import CountdownTimer from "../components/CountdownTimer";
-import { IMSAKIYAH_JAKARTA, getRamadhanDay } from "../lib/data";
+import { IMSAKIYAH_JAKARTA, getRamadhanDay, getStartDate } from "../lib/data";
 import { fetchMonthlySchedule } from "../lib/prayerTimes";
+
+// Helper to format date as "D MMM" (e.g. "18 Feb", "1 Mar")
+function formatDate(date) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  return `${date.getDate()} ${months[date.getMonth()]}`;
+}
 
 export default function SchedulePage() {
   const [mounted, setMounted] = useState(false);
@@ -16,15 +22,73 @@ export default function SchedulePage() {
     setMounted(true);
     async function loadSchedule() {
       setIsLoading(true);
-      const data = await fetchMonthlySchedule(2026, 3);
-      if (data && data.timings) {
-        setSchedule(data.timings.map((m, i) => ({ ...m, day: i + 1 })));
-        if (data.location) {
-          setLocationName(`Lokasi: ${data.location}`);
+
+      const startDate = getStartDate();
+
+      // Fetch both Feb and March prayer times since Ramadhan spans both months
+      const [febData, marData] = await Promise.all([
+        fetchMonthlySchedule(2026, 2),
+        fetchMonthlySchedule(2026, 3),
+      ]);
+
+      // Build a lookup map: "YYYY-M-D" -> prayer timing object
+      const timingsMap = {};
+      let fetchedLocation = null;
+
+      if (febData && febData.timings) {
+        fetchedLocation = febData.location;
+        febData.timings.forEach((t) => {
+          const key = `2026-2-${t.day}`;
+          timingsMap[key] = t;
+        });
+      }
+      if (marData && marData.timings) {
+        if (!fetchedLocation) fetchedLocation = marData.location;
+        marData.timings.forEach((t) => {
+          const key = `2026-3-${t.day}`;
+          timingsMap[key] = t;
+        });
+      }
+
+      const hasFetchedData = Object.keys(timingsMap).length > 0;
+
+      // Build 30-day Ramadhan schedule based on the user's chosen start date
+      const ramadhanSchedule = [];
+      for (let i = 0; i < 30; i++) {
+        const dayDate = new Date(startDate);
+        dayDate.setDate(startDate.getDate() + i);
+        const dayNum = i + 1;
+        const dateLabel = formatDate(dayDate);
+        const lookupKey = `${dayDate.getFullYear()}-${dayDate.getMonth() + 1}-${dayDate.getDate()}`;
+
+        if (hasFetchedData && timingsMap[lookupKey]) {
+          const t = timingsMap[lookupKey];
+          ramadhanSchedule.push({
+            day: dayNum,
+            date: dateLabel,
+            imsak: t.imsak,
+            subuh: t.subuh,
+            terbit: t.terbit,
+            dzuhur: t.dzuhur,
+            ashar: t.ashar,
+            maghrib: t.maghrib,
+            isya: t.isya,
+          });
+        } else {
+          // Fallback: use IMSAKIYAH_JAKARTA for this day
+          const fallback = IMSAKIYAH_JAKARTA[i] || IMSAKIYAH_JAKARTA[0];
+          ramadhanSchedule.push({
+            ...fallback,
+            day: dayNum,
+            date: dateLabel,
+          });
         }
+      }
+
+      setSchedule(ramadhanSchedule);
+      if (fetchedLocation) {
+        setLocationName(`Lokasi: ${fetchedLocation}`);
       } else {
-        // Fallback to Jakarta if fetch fails
-        setSchedule(IMSAKIYAH_JAKARTA);
         setLocationName("Jakarta & Sekitarnya (Default)");
       }
       setIsLoading(false);
@@ -133,10 +197,6 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded bg-gradient-to-r from-amber-500/30 to-amber-600/10 border border-amber-400/30" />
           <span>Hari ini</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-amber-400/60">*</span>
-          <span>Waktu untuk wilayah Jakarta</span>
         </div>
       </div>
 
